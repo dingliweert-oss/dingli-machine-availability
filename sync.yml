@@ -1,0 +1,42 @@
+name: Update customer machine availability
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: customer-site
+  cancel-in-progress: false
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read Tencent and export approved columns
+        env:
+          TENCENT_ACCESS_TOKEN: ${{ secrets.TENCENT_ACCESS_TOKEN }}
+          TENCENT_CLIENT_ID: ${{ secrets.TENCENT_CLIENT_ID }}
+          TENCENT_OPEN_ID: ${{ secrets.TENCENT_OPEN_ID }}
+          TENCENT_SHEET_ID: ${{ vars.TENCENT_SHEET_ID }}
+          COL_MODEL: ${{ vars.COL_MODEL }}
+          COL_SERIAL: ${{ vars.COL_SERIAL }}
+          COL_STATUS: ${{ vars.COL_STATUS }}
+          COL_YOM: ${{ vars.COL_YOM }}
+          COL_ETA: ${{ vars.COL_ETA }}
+        run: python sync.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
